@@ -1,31 +1,7 @@
 import type { HullResult, HullStep, Point } from "../types";
+import { getTrivialHull, uniquePoints } from "./edgeCases";
 import { compareByCoordinate, crossProduct, EPSILON, squaredDistance } from "./geometry";
-
-function createStep(
-  type: HullStep["type"],
-  points: Point[],
-  hull: Point[],
-  activePointIds: string[],
-  message: string,
-): HullStep {
-  return {
-    type,
-    points: [...points],
-    hull: [...hull],
-    activePointIds,
-    message,
-  };
-}
-
-function uniquePoints(points: Point[]): Point[] {
-  const unique = new Map<string, Point>();
-
-  for (const point of points) {
-    unique.set(`${point.x}:${point.y}`, point);
-  }
-
-  return [...unique.values()];
-}
+import { createStep } from "./steps";
 
 function findLeftmostPoint(points: Point[]): Point {
   return [...points].sort(compareByCoordinate)[0];
@@ -49,28 +25,16 @@ export function runJarvisMarch(points: Point[]): HullResult {
   const startedAt = performance.now();
   const steps: HullStep[] = [];
   const unique = uniquePoints(points);
+  const trivialHull = getTrivialHull(unique);
 
   steps.push(createStep("init", unique, [], [], "Initialize Jarvis March."));
 
-  if (unique.length <= 1) {
-    steps.push(createStep("complete", unique, unique, unique.map((point) => point.id), "Hull completed."));
+  if (trivialHull) {
+    steps.push(createStep("complete", unique, trivialHull, trivialHull.map((point) => point.id), "Hull completed."));
 
     return {
       algorithm: "jarvis",
-      hull: unique,
-      steps,
-      elapsedMs: performance.now() - startedAt,
-    };
-  }
-
-  if (unique.length === 2) {
-    const hull = [...unique].sort(compareByCoordinate);
-
-    steps.push(createStep("complete", unique, hull, hull.map((point) => point.id), "Hull completed."));
-
-    return {
-      algorithm: "jarvis",
-      hull,
+      hull: trivialHull,
       steps,
       elapsedMs: performance.now() - startedAt,
     };
